@@ -10,6 +10,7 @@ conda-package-handling @ file:///work/perseverance-python-buildout/croot/conda-p
 conda_package_streaming @ file:///work/perseverance-python-buildout/croot/conda-package-streaming_1698847176583/work
 cryptography @ file:///croot/cryptography_1710350347627/work
 distro @ file:///work/perseverance-python-buildout/croot/distro_1701732366176/work
+gunicorn==22.0.0
 idna @ file:///work/perseverance-python-buildout/croot/idna_1698845632828/work
 jsonpatch @ file:///tmp/build/80754af9/jsonpatch_1615747632069/work
 jsonpointer==2.1
