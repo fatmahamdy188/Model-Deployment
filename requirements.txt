@@ -5,10 +5,6 @@ certifi
 cffi
 charset-normalizer
 click==8.1.7
-conda
-conda-libmamba-solver
-conda-package-handling
-conda_package_streaming
 contourpy==1.2.1
 cryptography
 cycler==0.12.1
