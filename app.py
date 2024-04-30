@@ -14,7 +14,7 @@ app = Flask(__name__)
 app.logger.addHandler(logging.StreamHandler())
 app.logger.setLevel(logging.INFO)
 
-UPLOAD_FOLDER = '/path/to/upload/folder'  # Update with your desired upload folder path
+UPLOAD_FOLDER = '/workspaces/Model-Deployment/Images'  # Update with your desired upload folder path
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
