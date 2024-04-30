@@ -1,17 +1,13 @@
-import os
 import logging
-from datetime import datetime
 from flask import Flask, jsonify, request
 from PIL import Image
 from torchvision import transforms
 import torch
 import io
-import json
 import matplotlib.pyplot as plt
 import numpy as np
 import timm
 import torch.nn as nn
-
 
 app = Flask(__name__)
 
@@ -43,45 +39,14 @@ class PlantDiseaseModel(nn.Module):
         except Exception as e:
             app.logger.error(f"Error in forward pass: {str(e)}")
             raise e
+
 # Instantiate the model
 plant_disease_model = PlantDiseaseModel(num_classes)
 
-# Print the architecture of the backbone model
-#print(plant_disease_model.backbone)
-
-model_weights_path = r'D:\Graduation Project\Project implementation\PlantifyApp.FlaskApis\disease_best_model.pth'
-
-
+# Load the trained model weights
+model_weights_path = r'/workspaces/Model-Deployment/disease_best_model.pth'
 checkpoint = torch.load(model_weights_path, map_location=torch.device('cpu'))
-
- # Load the state dictionary directly
-plant_disease_model.eval()
-
-# # Retrieve the connection string from the environment variable
-# connect_str = os.getenv('AZURE_STORAGE_CONNECTION_STRING')
-
-# # Check if the connection string is set
-# if connect_str:
-#     result = {'status': 'success', 'message': 'AZURE_STORAGE_CONNECTION_STRING is set successfully', 'value': connect_str}
-# else:
-#     # Log a warning and set an error message
-#     app.logger.warning('AZURE_STORAGE_CONNECTION_STRING is not set.')
-#     result = {'status': 'error', 'message': 'AZURE_STORAGE_CONNECTION_STRING is not set.'}
-
-# # Container name in which images will be stored in the storage account
-# container_name = "picturesstorage"
-
-# # Create a blob service client to interact with the storage account
-# blob_service_client = BlobServiceClient.from_connection_string(conn_str=connect_str)
-
-# try:
-#     # Get container client to interact with the container in which images will be stored
-#     container_client = blob_service_client.get_container_client(container=container_name)
-
-# except Exception as e:
-#     app.logger.error(f"Error accessing container: {str(e)}")
-#     app.logger.info("Creating container...")
-#     container_client = blob_service_client.create_container(container_name)
+plant_disease_model.load_state_dict(checkpoint)
 
 # Dictionary of plant disease classes
 classes = {
@@ -148,7 +113,6 @@ classes = {
     'Tomato___target_spot': 60
    
 }
-
 # Flask endpoint to upload a photo and make predictions
 @app.route("/upload-photos-and-predict", methods=["POST"])
 def upload_photos_and_predict():
@@ -175,20 +139,19 @@ def upload_photos_and_predict():
             new_file_name = f"{timestamp}_{os.path.basename(original_file_path)}"
 
             # Call the function to handle the upload and prediction
-        prediction_result = upload_photo_and_predict(original_file_path, new_file_name)
+            prediction_result = upload_photo_and_predict(original_file_path, new_file_name)
 
-        if prediction_result is not None:
-            return jsonify(prediction_result)
+            if prediction_result is not None:
+                return jsonify(prediction_result)
 
-        else:
-            result = {"status": 404, "message": "File path does not exist"}
-            return jsonify(result), 404  # Set the status code to 404
+            else:
+                result = {"status": 404, "message": "File path does not exist"}
+                return jsonify(result), 404  # Set the status code to 404
 
     except Exception as e:
         app.logger.error(f"Unhandled error during photo upload and prediction: {str(e)}")
         result = {"status": 500, "message": "Internal Server Error", "error_details": str(e)}
         return jsonify(result), 500  # Set the status code to 500
-
 
 def upload_photo_and_predict(original_file_path, new_file_name):
     try:
@@ -197,40 +160,32 @@ def upload_photo_and_predict(original_file_path, new_file_name):
 
         # Apply the desired transformations (resize, normalize, etc.)
         transform = transforms.Compose([
-           transforms.Resize((224, 224)),
-           transforms.ToTensor(),
-           transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-            ])
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ])
 
         # Convert RGBA to RGB if the image has an alpha channel
         if original_image.mode == 'RGBA':
             original_image = original_image.convert('RGB')
 
-       
         # Apply the transformations to the original image
         transformed_image = transform(original_image)
 
-      
-        # Save the transformed image to a temporary file in JPEG format
-        temp_file_path = "temp_transformed_image.jpg"
-        transformed_image_pil = transforms.ToPILImage()(transformed_image)
-        transformed_image_pil.save(temp_file_path, format="JPEG")
-
-        # Upload the transformed file to the container using the file path
-        # with open(temp_file_path, 'rb') as file:
-        #     container_client.upload_blob(new_file_name, file)
-
-
-        print(transformed_image.size())
         # Make predictions using the model
         prediction = predict_image(transformed_image)
 
-        # Remove the temporary file
-        os.remove(temp_file_path)
+        # Create a JSON response
+        result = {
+            "status": 200,
+            "message": "Prediction successful",
+            "predicted_class_label": prediction["predicted_class_label"],
+            "predicted_class": classes[prediction["predicted_class_label"]],
+            "probabilities": prediction["probabilities"],
+            "input_tensor_shape": transformed_image.shape[1:]  # Exclude batch dimension
+        }
 
-        app.logger.info(f"Successfully uploaded and predicted photo: {new_file_name}")
-
-        return prediction
+        return result
 
     except Exception as e:
         app.logger.error(f"Error during photo upload and prediction: {str(e)}")
@@ -241,20 +196,8 @@ def predict_image(transformed_image):
         # Ensure the model is in evaluation mode
         plant_disease_model.eval()
 
-        # Print the shape of the input tensor
-        print("Input tensor shape:", transformed_image.shape)
-
-        print("Input tensor shape:", transformed_image.shape)
         # Add a batch dimension
         transformed_image = transformed_image.unsqueeze(0)
-        print("Input tensor shape after unsqueeze:", transformed_image.shape)
-
-
-        # Check if the input tensor has at least three dimensions
-        if len(transformed_image.shape) < 3:
-            raise ValueError("Input tensor should have at least three dimensions")
-
-        print("Input tensor shape after unsqueeze:", transformed_image.shape)
 
         # Forward pass through the model
         with torch.no_grad():
@@ -269,17 +212,10 @@ def predict_image(transformed_image):
         # Directly access label using index
         predicted_class_label = list(classes.keys())[predicted_class_index]
 
-        # Directly access label using index
-        predicted_class = classes[predicted_class_label]
-
-        # Create a JSON response
+        # Create a prediction result dictionary
         result = {
-            "status": 200,
-            "message": "Prediction successful",
             "predicted_class_label": predicted_class_label,
-            "predicted_class": predicted_class,
             "probabilities": probabilities.tolist(),
-            "input_tensor_shape": transformed_image.shape[1:]  # Exclude batch dimension
         }
 
         return result
@@ -287,7 +223,6 @@ def predict_image(transformed_image):
     except Exception as e:
         app.logger.error(f"Error during prediction: {str(e)}")
         return {"status": 500, "message": "Internal Server Error", "error_details": str(e)}
-
 
 # Custom error handler for 404 errors
 @app.errorhandler(404)

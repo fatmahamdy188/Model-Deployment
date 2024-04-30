@@ -1,6 +1,5 @@
 import os
 import logging
-from datetime import datetime
 from flask import Flask, jsonify, request
 from PIL import Image
 from torchvision import transforms
@@ -14,6 +13,14 @@ app = Flask(__name__)
 # Configure the Flask app logger
 app.logger.addHandler(logging.StreamHandler())
 app.logger.setLevel(logging.INFO)
+
+UPLOAD_FOLDER = '/path/to/upload/folder'  # Update with your desired upload folder path
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # Flask endpoint to upload a photo using a file path from the query parameter or JSON parameter
 @app.route("/upload-photos", methods=["POST"])
