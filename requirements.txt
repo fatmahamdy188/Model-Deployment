@@ -42,3 +42,4 @@ urllib3
 Werkzeug==3.0.2
 wheel==0.41.2
 zstandard
+timm
