@@ -7,6 +7,7 @@ import torch
 import io
 import matplotlib.pyplot as plt
 import numpy as np
+from PlantDiseaseModel import PlantDiseaseModel
 
 app = Flask(__name__)
 
