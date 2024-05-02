@@ -40,11 +40,11 @@ class PlantDiseaseModel(nn.Module):
             app.logger.error(f"Error in forward pass: {str(e)}")
             raise e
 
-# Instantiate the model
+# Instantiate the model 
 plant_disease_model = PlantDiseaseModel(num_classes)
 
 # Load the trained model weights 
-model_weights_path = r'workspaces/Model-Deployment/disease_best_model.pth'
+model_weights_path = r'/fatmahamdy188/Model-Deployment/blob/main/disease_best_model.pth'
 checkpoint = torch.load(model_weights_path, map_location=torch.device('cpu'))
 plant_disease_model.eval()
 
