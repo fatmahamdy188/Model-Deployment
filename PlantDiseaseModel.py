@@ -44,7 +44,7 @@ class PlantDiseaseModel(nn.Module):
 plant_disease_model = PlantDiseaseModel(num_classes)
 
 # Load the trained model weights 
-model_weights_path = r'/fatmahamdy188/Model-Deployment/blob/main/disease_best_model.pth'
+model_weights_path = r'https://github.com/fatmahamdy188/Model-Deployment/blob/main/disease_best_model.pth'
 checkpoint = torch.load(model_weights_path, map_location=torch.device('cpu'))
 plant_disease_model.eval()
 
