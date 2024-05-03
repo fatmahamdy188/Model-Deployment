@@ -44,7 +44,13 @@ class PlantDiseaseModel(nn.Module):
 plant_disease_model = PlantDiseaseModel(num_classes)
 
 # Load the trained model weights 
-model_weights_path = r'/disease_best_model.pth'
+import json
+
+with open('config.json') as config_file:
+    config = json.load(config_file)
+# Use model_path for loading the model
+
+model_weights_path = config['model_path']
 checkpoint = torch.load(model_weights_path, map_location=torch.device('cpu'))
 plant_disease_model.eval()
 
