@@ -1,4 +1,6 @@
+import datetime
 import logging
+import os
 from flask import Flask, jsonify, request
 from PIL import Image
 from torchvision import transforms
@@ -8,6 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import timm
 import torch.nn as nn
+from app import *
 
 app = Flask(__name__)
 
@@ -136,7 +139,7 @@ def upload_photos_and_predict():
         # Check if the file path exists
         if os.path.exists(original_file_path):
             # Generate a timestamp
-            timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+            timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
 
             # Extract the file extension
             file_extension = os.path.splitext(original_file_path)[1]
