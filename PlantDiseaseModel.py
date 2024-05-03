@@ -162,6 +162,7 @@ def upload_photos_and_predict():
         result = {"status": 500, "message": "Internal Server Error", "error_details": str(e)}
         return jsonify(result), 500  # Set the status code to 500
 
+
 def upload_photo_and_predict(original_file_path, new_file_name):
     try:
         # Open the original image using PIL

@@ -7,7 +7,7 @@ import torch
 import io
 import matplotlib.pyplot as plt
 import numpy as np
-from PlantDiseaseModel  import PlantDiseaseModel
+from PlantDiseaseModel  import *
 app = Flask(__name__)
 
 # Configure the Flask app logger
