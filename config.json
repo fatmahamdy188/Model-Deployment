@@ -1,4 +1,1 @@
-{
-  "model_path": "disease_best_model.pth",
-  "UPLOAD_FOLDER": "UPLOAD_FOLDER"
-}
+{"model_path": "disease_best_model.pth", "UPLOAD_FOLDER": "Images"}

@@ -10,7 +10,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import timm
 import torch.nn as nn
-from app import *
+from app2 import *
+import requests
+from urllib.parse import urlparse
 
 app = Flask(__name__)
 
@@ -138,6 +140,7 @@ def upload_photos_and_predict():
 
         # Check if the file path exists
         if os.path.exists(original_file_path):
+            is_external_url = 0
             # Generate a timestamp
             timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
 
@@ -148,12 +151,34 @@ def upload_photos_and_predict():
             new_file_name = f"{timestamp}_{os.path.basename(original_file_path)}"
 
             # Call the function to handle the upload and prediction
-            prediction_result = upload_photo_and_predict(original_file_path, new_file_name)
+            prediction_result = upload_photo_and_predict(original_file_path, new_file_name, is_external_url)
 
             if prediction_result is not None:
                 return jsonify(prediction_result)
-
             else:
+                result = {"status": 404, "message": "File path does exist but failed"}
+                return jsonify(result), 404  # Set the status code to 404
+
+        else:
+            if original_file_path is not None:
+                is_external_url = 1
+                # Generate a timestamp
+                timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+
+                # Extract the file extension
+                original_file_path = original_file_path.split('?')[0]
+                parsed_url = urlparse(original_file_path).path
+                file_extension = os.path.splitext(parsed_url)[1]
+
+                # Generate a new file name with timestamp appended
+                new_file_name = f"{timestamp}_{os.path.basename(original_file_path)}"
+
+                # Call the function to handle the upload and prediction
+                prediction_result = upload_photo_and_predict(original_file_path, new_file_name, is_external_url)
+
+                if prediction_result is not None:
+                    return jsonify(prediction_result)
+            else:   
                 result = {"status": 404, "message": "File path does not exist"}
                 return jsonify(result), 404  # Set the status code to 404
 
@@ -163,11 +188,15 @@ def upload_photos_and_predict():
         return jsonify(result), 500  # Set the status code to 500
 
 
-def upload_photo_and_predict(original_file_path, new_file_name):
+def upload_photo_and_predict(original_file_path, new_file_name, is_external_url):
     try:
-        # Open the original image using PIL
-        original_image = Image.open(original_file_path)
-
+        if is_external_url != 0 :
+            # Open the original image using PIL
+            original_image = Image.open(requests.get(original_file_path, stream = True).raw)
+        else:
+            # Open the original image using PIL
+            original_image = Image.open(original_file_path)
+            
         # Apply the desired transformations (resize, normalize, etc.)
         transform = transforms.Compose([
             transforms.Resize((224, 224)),

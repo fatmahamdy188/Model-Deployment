@@ -14,10 +14,16 @@ app = Flask(__name__)
 app.logger.addHandler(logging.StreamHandler())
 app.logger.setLevel(logging.INFO)
 
-UPLOAD_FOLDER = '/workspaces/Model-Deployment/Images'  # Update with your desired upload folder path
+UPLOAD_FOLDER = 'Images'  # Update with your desired upload folder path
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+with open('config.json') as config_file:
+    config = json.load(config_file)
+
+config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+with open('config.json', 'w') as config_file:
+    json.dump(config, config_file)
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -37,7 +43,7 @@ def upload_photos():
             return jsonify(result), 400
         if file and allowed_file(file.filename):
             # Save the uploaded image to a temporary file
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+            file_path = os.path.join(config['UPLOAD_FOLDER'], file.filename)
             file.save(file_path)
 
             # Process the image and return the result
