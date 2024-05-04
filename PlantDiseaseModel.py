@@ -5,12 +5,12 @@ from flask import Flask, jsonify, request
 from PIL import Image
 from torchvision import transforms
 import torch
-import io
-import matplotlib.pyplot as plt
-import numpy as np
+#import io
+#import matplotlib.pyplot as plt
+#import numpy as np
 import timm
 import torch.nn as nn
-from app2 import *
+#from app2 import *
 import requests
 from urllib.parse import urlparse
 
