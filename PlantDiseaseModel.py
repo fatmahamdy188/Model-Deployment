@@ -56,7 +56,7 @@ with open('config.json') as config_file:
 # Use model_path for loading the model
 
 model_weights_path = config['model_path']
-checkpoint = torch.load(model_weights_path, map_location=torch.device('cpu'))
+checkpoint = plant_disease_model.load_state_dict(torch.load(model_weights_path, map_location=torch.device('cpu')))
 plant_disease_model.eval()
 
 # Dictionary of plant disease classes
