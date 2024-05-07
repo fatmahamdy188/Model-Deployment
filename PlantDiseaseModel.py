@@ -30,7 +30,7 @@ class PlantDiseaseModel(nn.Module):
         self.backbone = timm.create_model("rexnet_150", pretrained=True)
         
         # Adjust the fully connected layer for your task
-        self.fc = nn.Linear(1000, num_classes)
+        self.fc = nn.Linear(1920, num_classes)  # Update the input size based on RexNet-150's output size
 
     def forward(self, x):
         try:
@@ -41,9 +41,11 @@ class PlantDiseaseModel(nn.Module):
             x = self.fc(x.view(x.size(0), -1))
             print("After fc:", x.shape)
             return x
+            
         except Exception as e:
             app.logger.error(f"Error in forward pass: {str(e)}")
             raise e
+
 
 # Instantiate the model 
 plant_disease_model = PlantDiseaseModel(num_classes)
@@ -56,7 +58,16 @@ with open('config.json') as config_file:
 # Use model_path for loading the model
 
 model_weights_path = config['model_path']
-checkpoint = plant_disease_model.load_state_dict(torch.load(model_weights_path, map_location=torch.device('cpu')))
+
+checkpoint = torch.load(model_weights_path, map_location=torch.device('cpu'))
+#print(checkpoint.keys())
+# Handle loading model weights with nn.DataParallel
+
+plant_disease_model = nn.DataParallel(plant_disease_model)
+plant_disease_model.load_state_dict(checkpoint)
+
+
+
 plant_disease_model.eval()
 
 # Dictionary of plant disease classes
