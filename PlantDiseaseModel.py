@@ -1,6 +1,7 @@
 import datetime
 import logging
 import os
+import torch
 from flask import Flask, jsonify, request
 from PIL import Image
 from torchvision import transforms
@@ -13,6 +14,7 @@ import torch.nn as nn
 #from app2 import *
 import requests
 from urllib.parse import urlparse
+import torchvision.models as models
 
 app = Flask(__name__)
 
@@ -22,31 +24,101 @@ app.logger.setLevel(logging.INFO)
 
 num_classes = 61
 
-
-class PlantDiseaseModel(nn.Module):
-    def __init__(self, num_classes):
-        super(PlantDiseaseModel, self).__init__()
-        # Use RexNet-150 as the backbone
-        self.backbone = timm.create_model("rexnet_150", pretrained=True)
-        
-        # Adjust the fully connected layer for your task
-        self.fc = nn.Linear(1000, num_classes)
+class ConvNormAct(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, groups=1, bias=False):
+        super(ConvNormAct, self).__init__()
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, stride=stride, padding=padding, groups=groups, bias=bias)
+        self.bn = nn.BatchNorm2d(out_channels)
+        self.act = nn.SiLU(inplace=True)  # Swish activation
 
     def forward(self, x):
-        try:
-            print("Before backbone:", x.shape)
-            x = self.backbone(x)
-            print("After backbone:", x.shape)
-            print("Before fc:", x.shape)
-            x = self.fc(x.view(x.size(0), -1))
-            print("After fc:", x.shape)
-            return x
-        except Exception as e:
-            app.logger.error(f"Error in forward pass: {str(e)}")
-            raise e
+        x = self.conv(x)
+        x = self.bn(x)
+        x = self.act(x)
+        return x
 
-# Instantiate the model 
-plant_disease_model = PlantDiseaseModel(num_classes)
+class LinearBottleneck(nn.Module):
+    def __init__(self, in_channels, exp_channels, out_channels, stride, se_ratio=0.25):
+        super(LinearBottleneck, self).__init__()
+        mid_channels = int(exp_channels * se_ratio)
+        
+        self.conv_exp = ConvNormAct(in_channels, exp_channels, kernel_size=1, bias=False)
+        self.conv_dw = ConvNormAct(exp_channels, exp_channels, kernel_size=3, stride=stride, padding=1, groups=exp_channels, bias=False)
+        self.act_dw = nn.ReLU6()
+        self.conv_pwl = ConvNormAct(exp_channels, out_channels, kernel_size=1, bias=False)
+        
+        # SE Module
+        self.se = nn.Sequential(
+            nn.AdaptiveAvgPool2d(1),
+            nn.Conv2d(exp_channels, mid_channels, kernel_size=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(mid_channels, exp_channels, kernel_size=1),
+            nn.Sigmoid()
+        )
+
+        self.act_pwl = nn.Identity() if in_channels == out_channels else nn.ReLU()
+
+    def forward(self, x):
+        identity = x
+
+        x = self.conv_exp(x)
+        x = self.conv_dw(x)
+        x = self.act_dw(x)
+        
+        # Apply SE Module
+        se_weight = self.se(x)
+        x = x * se_weight
+
+        x = self.conv_pwl(x)
+
+        if self.act_pwl is not None:
+            x = self.act_pwl(x + identity)
+
+        return x
+
+class PlantDiseaseModel(nn.Module):
+    def __init__(self, num_classes=61):
+        super(PlantDiseaseModel, self).__init__()
+        # Stem
+        self.stem = ConvNormAct(3, 48, kernel_size=3, stride=2, padding=1, bias=False)
+        
+        # Features
+        self.features = nn.Sequential(
+            LinearBottleneck(48, 48, 24, stride=1),
+            LinearBottleneck(24, 144, 41, stride=2),
+            LinearBottleneck(41, 246, 58, stride=1),
+            LinearBottleneck(58, 348, 75, stride=2),
+            LinearBottleneck(75, 450, 92, stride=1),
+            LinearBottleneck(92, 552, 108, stride=2),
+            LinearBottleneck(108, 648, 125, stride=1),
+            LinearBottleneck(125, 750, 142, stride=1),
+            LinearBottleneck(142, 852, 159, stride=1),
+            LinearBottleneck(159, 954, 176, stride=1),
+            LinearBottleneck(176, 1056, 193, stride=1),
+            LinearBottleneck(193, 1158, 210, stride=2),
+            LinearBottleneck(210, 1260, 226, stride=1),
+            LinearBottleneck(226, 1356, 243, stride=1),
+            LinearBottleneck(243, 1458, 260, stride=1),
+            LinearBottleneck(260, 1560, 277, stride=1),
+            ConvNormAct(277, 1920, kernel_size=1, bias=False)
+        )
+
+        # Head
+        self.head = nn.Sequential(
+            nn.AdaptiveAvgPool2d(1),
+            nn.Dropout(p=0.2),
+            nn.Flatten(),
+            nn.Linear(1920, num_classes)
+        )
+
+    def forward(self, x):
+        x = self.stem(x)
+        x = self.features(x)
+        x = self.head(x)
+        return x
+
+# Create an instance of the RexNet150 model
+plant_disease_model = PlantDiseaseModel()
 
 # Load the trained model weights 
 import json
@@ -56,7 +128,8 @@ with open('config.json') as config_file:
 # Use model_path for loading the model
 
 model_weights_path = config['model_path']
-checkpoint = torch.load(model_weights_path, map_location=torch.device('cpu'))
+plant_disease_model.load_state_dict(torch.load(model_weights_path, map_location=torch.device('cpu')))
+
 plant_disease_model.eval()
 
 # Dictionary of plant disease classes
