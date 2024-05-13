@@ -21,42 +21,71 @@ app.logger.addHandler(logging.StreamHandler())
 app.logger.setLevel(logging.INFO)
 
 num_classes = 61
-
-
-class PlantDiseaseModel(nn.Module):
-    def __init__(self, num_classes):
-        super(PlantDiseaseModel, self).__init__()
-        # Use RexNet-150 as the backbone
-        self.backbone = timm.create_model("rexnet_150", pretrained=True)
-        
-        # Adjust the fully connected layer for your task
-        self.fc = nn.Linear(1000, num_classes)
-
-    def forward(self, x):
-        try:
-            print("Before backbone:", x.shape)
-            x = self.backbone(x)
-            print("After backbone:", x.shape)
-            print("Before fc:", x.shape)
-            x = self.fc(x.view(x.size(0), -1))
-            print("After fc:", x.shape)
-            return x
-        except Exception as e:
-            app.logger.error(f"Error in forward pass: {str(e)}")
-            raise e
-
-# Instantiate the model 
-plant_disease_model = PlantDiseaseModel(num_classes)
-
-# Load the trained model weights 
 import json
 
+# Define your model class
+class PlantDiseaseModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.stem = torch.nn.Sequential(
+            torch.nn.Conv2d(in_channels=3, out_channels=48, kernel_size=3, stride=1, padding=1),
+            torch.nn.BatchNorm2d(48),
+            torch.nn.ReLU(inplace=True)
+        )
+        self.features = torch.nn.Sequential(
+            torch.nn.Conv2d(in_channels=48, out_channels=48, kernel_size=1),
+            torch.nn.BatchNorm2d(48),
+            torch.nn.ReLU(inplace=True),
+            torch.nn.Conv2d(in_channels=48, out_channels=48, kernel_size=3, stride=1, padding=1, groups=48),
+            torch.nn.BatchNorm2d(48),
+            torch.nn.ReLU(inplace=True),
+            torch.nn.Conv2d(in_channels=48, out_channels=24, kernel_size=1),
+            torch.nn.BatchNorm2d(24),
+            torch.nn.ReLU(inplace=True),
+            torch.nn.AdaptiveAvgPool2d((1, 1))
+        )
+        self.head = torch.nn.Linear(24, 61)  # Assuming 61 classes
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+        x = self.ca(x)*x
+        x = self.sa(x)*x
+        x = self.cal(x)*x
+        x = self.sal(x)*x
+        x = self.stem(x)
+        x = self.features(x)
+        x = torch.flatten(x, 1)
+        x = self.head(x)
+        return x
+
+
+# Load the trained model weights
 with open('config.json') as config_file:
     config = json.load(config_file)
-# Use model_path for loading the model
 
+
+# Instantiate the model
+plant_disease_model = PlantDiseaseModel()
+# Print model's architecture
 model_weights_path = config['model_path']
-checkpoint = plant_disease_model.load_state_dict(torch.load(model_weights_path, map_location=torch.device('cpu')))
+checkpoint =torch.load(model_weights_path, map_location=torch.device('cpu'))
+plant_disease_model.load_state_dict(checkpoint,strict=False)
+
+# Print keys of the loaded state_dict and keys expected by the model
+#print("\nKeys in loaded state_dict:")
+#print(modified_state_dict.keys())
+
+
+
+
+# Adjust the key mapping based on your model's structure
+
+# Load the modified state_dict into the model
+
+
+# Set the model to evaluation mode
 plant_disease_model.eval()
 
 # Dictionary of plant disease classes
