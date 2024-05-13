@@ -70,6 +70,7 @@ with open('config.json') as config_file:
 plant_disease_model = PlantDiseaseModel()
 # Print model's architecture
 model_weights_path = config['model_path']
+<<<<<<< HEAD:PlantDiseaseModel (1).py
 checkpoint =torch.load(model_weights_path, map_location=torch.device('cpu'))
 plant_disease_model.load_state_dict(checkpoint,strict=False)
 
@@ -86,6 +87,9 @@ plant_disease_model.load_state_dict(checkpoint,strict=False)
 
 
 # Set the model to evaluation mode
+=======
+checkpoint = torch.load(model_weights_path, map_location=torch.device('cpu'))
+>>>>>>> 8f4ed7507ed378ed4bcc45e3436d816030b0bb79:PlantDiseaseModel.py
 plant_disease_model.eval()
 
 # Dictionary of plant disease classes
