@@ -65,12 +65,13 @@ class PlantDiseaseModel(torch.nn.Module):
 with open('config.json') as config_file:
     config = json.load(config_file)
 
+model_weights_path = config['model_path']
+checkpoint =torch.load(model_weights_path, map_location=torch.device('cpu'))
 
 # Instantiate the model
 plant_disease_model = PlantDiseaseModel()
 # Print model's architecture
-model_weights_path = config['model_path']
-checkpoint =torch.load(model_weights_path, map_location=torch.device('cpu'))
+
 plant_disease_model.load_state_dict(checkpoint,strict=False)
 
 # Print keys of the loaded state_dict and keys expected by the model
