@@ -5,14 +5,18 @@ from flask import Flask, jsonify, request
 from PIL import Image
 from torchvision import transforms
 import torch
-#import io
-#import matplotlib.pyplot as plt
-#import numpy as np
 import timm
 import torch.nn as nn
-#from app2 import *
 import requests
 from urllib.parse import urlparse
+import cv2
+import matplotlib.pyplot as plt
+import torch.nn as nn
+import torchvision.transforms as T
+import numpy as np
+import timm
+import random
+from PIL import Image
 
 app = Flask(__name__)
 
